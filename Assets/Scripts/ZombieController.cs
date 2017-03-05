@@ -9,6 +9,9 @@ public class ZombieController : MonoBehaviour {
 	protected GameObject ZombiePrefab;
 
 	[SerializeField]
+	protected GameObject Zombie2TypePrefab;
+
+	[SerializeField]
 	protected GameObject Zombie3TypePrefab;
 
 	[SerializeField]
@@ -42,19 +45,29 @@ public class ZombieController : MonoBehaviour {
 	[SerializeField]
 	protected Text BombCountText;
 
+	[SerializeField]
+	protected Text ScoreText;
+
+	[SerializeField]
+	protected AudioClip ExplosionAudioClip;
+
 	private const int MAX_SURVIVED_ZOMBIE  = 3;
 	private const int BOMB_KILL_RADIUS = 6;
 	private const float TIME_ROUND = 60f;
+	private const int ZOMBIE_COST = 10;
 
 	private StartDialog StartDialog;
 	private ResultDialog ResultDialog;
 	private WinDialog WinDialog;
+
+	private AudioSource AudioSource;
 
 	private Vector3 center;
 	private bool IsMassacreOn;
 
 	private int SurvivedZombieCount;
 	private int _BombCount;
+	private int _Score;
 
 	private float TimeLeft;
 
@@ -66,6 +79,8 @@ public class ZombieController : MonoBehaviour {
 				StartCoroutine(DropBomb());
 			}
 		});
+
+		AudioSource = GetComponent<AudioSource> ();
 
 		OpenStartDialog ();
 	}
@@ -84,6 +99,8 @@ public class ZombieController : MonoBehaviour {
 		GameObject explosionGO = (GameObject)GameObject.Instantiate(ExplosionPrefab);
 		explosionGO.transform.position = center;
 
+		AudioSource.PlayOneShot(ExplosionAudioClip);
+
 		CheckZombiesForKillByBomb ();
 
 		yield return new WaitForSeconds (2);
@@ -101,6 +118,16 @@ public class ZombieController : MonoBehaviour {
 			}
 		}
 
+	}
+
+	public int Score {
+		get {
+			return _Score;
+		}
+		set {
+			_Score = value;
+			ScoreText.text = "SCORE " + value;
+		}
 	}
 	
 	public int BombCount {
@@ -155,6 +182,7 @@ public class ZombieController : MonoBehaviour {
 	private void StartMassacre() {
 		IsMassacreOn = true;
 		TimeLeft = TIME_ROUND;
+		Score = 0;
 		FillZombiePanel ();
 		StartCoroutine (StartZombieCreateHellMachine());
 	}
@@ -185,10 +213,13 @@ public class ZombieController : MonoBehaviour {
 		GameObject zombieGO;
 		if (zombieType == Zombie.ZombieType.Third) {
 			zombieGO = ((GameObject)(GameObject.Instantiate (Zombie3TypePrefab)));
-		} else {
+		} else if (zombieType == Zombie.ZombieType.First) {
 			zombieGO = ((GameObject)(GameObject.Instantiate (ZombiePrefab)));
 		}
-		Zombie zombie = zombieGO.AddComponent<Zombie>();
+		else {
+			zombieGO = ((GameObject)(GameObject.Instantiate (Zombie2TypePrefab)));
+		}
+		Zombie zombie = zombieGO.GetComponent<Zombie>();
 		Vector3 zeroScreenPoint = MainCamera.ScreenToWorldPoint (new Vector3 (0, 0, 0));
 		float posX = Random.Range (zeroScreenPoint.x, MainCamera.ScreenToWorldPoint(new Vector3(Screen.width,0,0)).x);
 		zombieGO.transform.position = new Vector3(posX, 0, -5);
@@ -207,6 +238,7 @@ public class ZombieController : MonoBehaviour {
 
 	private void HandleChangeZombieStateEvent (Zombie zombie) {
 		if (zombie.State == Zombie.ZombieState.Dead) {
+			Score += ZOMBIE_COST;
 			StartCoroutine(StartDestroyZombie(zombie));
 			if ((IsMassacreOn) && (zombie.Type == Zombie.ZombieType.Third)) {
 				StopMassacre();

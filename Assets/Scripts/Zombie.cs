@@ -11,17 +11,33 @@ public class Zombie : MonoBehaviour {
 	private ZombieState _ZombieState = ZombieState.Alive;
 	private ZombieType _ZombieType;
 
+	[SerializeField]
+	protected AudioClip ZombieWalk;
+
+	[SerializeField]
+	protected AudioClip ZombieDies;
+
+	private AudioSource AudioSource;
+
 	public event Action<Zombie> StopEvent; 
 	public event Action<Zombie> ChangeZombieStateEvent;
 
+	private void Awake() {
+		AudioSource = GetComponent<AudioSource>();
+	}
+
 	public ZombieState State {
 		set {
-			_ZombieState = value;
-			if (value == ZombieState.Dead) {
-				gameObject.GetComponent<Animator>().SetBool("back_fall", true);
+			if (_ZombieState != value){
+				_ZombieState = value;
+				if (value == ZombieState.Dead) {
+					gameObject.GetComponent<Animator>().SetBool("back_fall", true);
+					AudioSource.Stop();
+					AudioSource.PlayOneShot(ZombieDies);
+				}
+				if (ChangeZombieStateEvent != null)
+					ChangeZombieStateEvent.Invoke(this);
 			}
-			if (ChangeZombieStateEvent != null)
-				ChangeZombieStateEvent.Invoke(this);
 		}
 		get {
 			return _ZombieState;
@@ -51,6 +67,7 @@ public class Zombie : MonoBehaviour {
 	}
 
 	private IEnumerator StartMove(List<Vector3> endPos, float time){
+		AudioSource.PlayOneShot (ZombieWalk);
 		for (int k = 0; k < endPos.Count; k++) {
 			float i = 0.0f;
 			float rate = 1.0f / time / endPos.Count;
@@ -62,7 +79,9 @@ public class Zombie : MonoBehaviour {
 			}
 		}
 
-		if (State == ZombieState.Alive)
+		if (State == ZombieState.Alive) {
+			AudioSource.Stop();
 			InvokeStopEvent ();
+		}
 	} 
 }

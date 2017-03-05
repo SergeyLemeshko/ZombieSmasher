@@ -1,2 +1,0 @@
-# ZombieSmasher
-casual game
